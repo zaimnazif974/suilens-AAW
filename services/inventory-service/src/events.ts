@@ -11,16 +11,28 @@ let channel: amqplib.Channel | null = null;
 
 async function getChannel(): Promise<amqplib.Channel> {
     if (channel) return channel;
-    const connection = await amqplib.connect(RABBITMQ_URL);
-    channel = await connection.createChannel();
-    await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
-    return channel;
+
+    let retries = 5;
+    while (retries > 0) {
+        try {
+            const connection = await amqplib.connect(RABBITMQ_URL);
+            channel = await connection.createChannel();
+            await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
+            return channel;
+        } catch (error: any) {
+            console.error(`RabbitMQ connection failed, retrying in 5s... (${retries} retries left):`, error.message);
+            retries -= 1;
+            if (retries === 0) throw error;
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
+    throw new Error('Could not establish RabbitMQ connection');
 }
 
 export async function setupEventConsumers() {
     const ch = await getChannel();
     await ch.assertQueue(QUEUE_NAME, { durable: true });
-    // bind to the order.cancelled routing key
+
     await ch.bindQueue(QUEUE_NAME, EXCHANGE_NAME, 'order.cancelled');
 
     console.log('Inventory service listening for events...');
@@ -34,17 +46,16 @@ export async function setupEventConsumers() {
 
             if (event === 'order.cancelled') {
                 const { orderId, lensId, branchCode } = data;
-                const eventId = msg.properties.messageId || orderId; // Ideally messageId if published
+                const eventId = msg.properties.messageId || orderId;
 
                 // Idempotency check 
-                // We begin by checking if we have processed this event
                 const existingEvent = await db.select().from(processedEvents).where(eq(processedEvents.eventId, eventId));
 
                 if (existingEvent.length === 0) {
                     console.log(`Processing order.cancelled for order ${orderId}, lens ${lensId}, branch ${branchCode}`);
 
                     await db.transaction(async (tx) => {
-                        // Un-reserve the stock (increase availableQuantity)
+
                         await tx.update(inventory)
                             .set({
                                 availableQuantity: sql`${inventory.availableQuantity} + 1`,
@@ -54,7 +65,6 @@ export async function setupEventConsumers() {
                                 sql`${inventory.lensId} = ${lensId} AND ${inventory.branchCode} = ${branchCode}`
                             );
 
-                        // Record the event as processed
                         await tx.insert(processedEvents).values({
                             eventId: eventId,
                             eventType: 'order.cancelled',
@@ -70,7 +80,6 @@ export async function setupEventConsumers() {
             ch.ack(msg);
         } catch (error) {
             console.error('Error processing message:', error);
-            // Nack with requeue if it's an unexpected error, but be careful of poison pills
             ch.nack(msg, false, false);
         }
     });

@@ -4,4 +4,4 @@ COPY package.json ./
 RUN bun install --force
 COPY . .
 EXPOSE 3002
-CMD ["bun", "run", "start"]
+CMD ["/bin/sh", "-c", "bun run db:push && bun run start"]

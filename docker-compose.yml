@@ -80,11 +80,14 @@ services:
       - "15015:3004"
     environment:
       DATABASE_URL: postgres://inventory:inventory@inventory-db:5432/inventory
+      CATALOG_DATABASE_URL: postgres://catalog:catalog@catalog-db:5432/catalog
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
     depends_on:
       inventory-db:
         condition: service_healthy
       rabbitmq:
+        condition: service_healthy
+      catalog-db:
         condition: service_healthy
 
   catalog-service:
@@ -136,6 +139,7 @@ services:
     environment:
       VITE_CATALOG_API: http://localhost:15010
       VITE_ORDER_API: http://localhost:15011
+      VITE_INVENTORY_API: http://localhost:15015
 
 volumes:
   catalog_pgdata:

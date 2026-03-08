@@ -1,15 +1,7 @@
-FROM oven/bun:1
-
+FROM oven/bun:1.3-alpine
 WORKDIR /app
-
-COPY package.json bun.lock ./
-RUN bun install
-
-COPY src src
-COPY tsconfig.json .
-
-ENV NODE_ENV=production
-
+COPY package.json ./
+RUN bun install --force
+COPY . .
 EXPOSE 3004
-
-CMD ["bun", "run", "start"]
+CMD ["/bin/sh", "-c", "bun run db:push && bun run db:seed && bun run start"]

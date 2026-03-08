@@ -7,8 +7,22 @@ const EXCHANGE_NAME = 'suilens.events';
 const QUEUE_NAME = 'notification-service.order-events';
 
 export async function startConsumer() {
-  const connection = await amqplib.connect(RABBITMQ_URL);
-  const channel = await connection.createChannel();
+  let connection: amqplib.ChannelModel | null = null;
+  let retries = 5;
+
+  while (retries > 0) {
+    try {
+      connection = await amqplib.connect(RABBITMQ_URL);
+      break;
+    } catch (error: any) {
+      console.error(`RabbitMQ connection failed, retrying in 5s... (${retries} attempts left):`, error.message);
+      retries -= 1;
+      if (retries === 0) throw error;
+      await new Promise(resolve => setTimeout(resolve, 5000));
+    }
+  }
+
+  const channel = await connection!.createChannel();
 
   await channel.assertExchange(EXCHANGE_NAME, 'topic', { durable: true });
   await channel.assertQueue(QUEUE_NAME, { durable: true });

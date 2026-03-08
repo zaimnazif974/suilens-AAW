@@ -4,8 +4,9 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "start": "bun run src/index.ts",
-    "db:push": "drizzle-kit push"
+    "db:push": "drizzle-kit push",
+    "db:seed": "bun run src/db/seed.ts",
+    "start": "bun run src/index.ts"
   },
   "devDependencies": {
     "@types/amqplib": "^0.10.8",
