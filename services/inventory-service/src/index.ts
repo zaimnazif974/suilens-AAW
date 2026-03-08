@@ -3,28 +3,26 @@ import { cors } from '@elysiajs/cors';
 import { db } from './db';
 import { inventory } from './db/schema';
 import { eq, and, sql } from 'drizzle-orm';
-import { setupEventConsumers } from './events';
+import { setupEventConsumers } from './consumer';
 
 const app = new Elysia()
     .use(cors())
-    .get('/api/inventory', async ({ query }) => {
+    .get('/api/inventory/lenses/:lensId', async ({ params, query }) => {
         let results;
-        if (query.branchCode && query.lensId) {
+        if (query.branchCode) {
             results = await db.select().from(inventory).where(
-                and(eq(inventory.branchCode, query.branchCode), eq(inventory.lensId, query.lensId))
+                and(eq(inventory.branchCode, query.branchCode), eq(inventory.lensId, params.lensId))
             );
-        } else if (query.branchCode) {
-            results = await db.select().from(inventory).where(eq(inventory.branchCode, query.branchCode));
-        } else if (query.lensId) {
-            results = await db.select().from(inventory).where(eq(inventory.lensId, query.lensId));
         } else {
-            results = await db.select().from(inventory);
+            results = await db.select().from(inventory).where(eq(inventory.lensId, params.lensId));
         }
         return results;
     }, {
+        params: t.Object({
+            lensId: t.String({ format: 'uuid' })
+        }),
         query: t.Optional(t.Object({
             branchCode: t.Optional(t.String()),
-            lensId: t.Optional(t.String({ format: 'uuid' })),
         }))
     })
     .post('/api/inventory/reserve', async ({ body }) => {

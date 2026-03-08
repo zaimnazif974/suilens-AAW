@@ -25,7 +25,7 @@ export const useOrderStore = defineStore('order', () => {
         cancelling.value = id
         try {
             const res = await fetch(`${import.meta.env.VITE_ORDER_API}/api/orders/${id}/cancel`, {
-                method: 'PUT'
+                method: 'PATCH'
             })
             if (!res.ok) {
                 const error = await res.json().catch(() => ({}))

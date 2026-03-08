@@ -164,7 +164,7 @@ const viewInventory = async (lens: any) => {
   loadingInventory.value = true;
   inventory.value = [];
   try {
-    const res = await fetch(`${import.meta.env.VITE_INVENTORY_API}/api/inventory?lensId=${lens.id}`);
+    const res = await fetch(`${import.meta.env.VITE_INVENTORY_API}/api/inventory/lenses/${lens.id}`);
     if (res.ok) {
         inventory.value = await res.json();
         const branchPriority: Record<string, number> = { 'KB-JKT-S': 3, 'KB-JKT-E': 2, 'KB-JKT-N': 1 };

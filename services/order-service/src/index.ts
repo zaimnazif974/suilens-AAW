@@ -69,6 +69,7 @@ const app = new Elysia()
       return new Response(JSON.stringify({ error: 'Failed to create order' }), { status: 500 });
     }
 
+    //Publish Event
     await publishEvent('order.placed', {
       orderId: order.id,
       customerName: body.customerName,
@@ -87,7 +88,7 @@ const app = new Elysia()
       endDate: t.String(),
     }),
   })
-  .put('/api/orders/:id/cancel', async ({ params }: { params: { id: string } }) => {
+  .patch('/api/orders/:id/cancel', async ({ params }: { params: { id: string } }) => {
     const [order] = await db.update(orders)
       .set({ status: 'cancelled' })
       .where(eq(orders.id, params.id))
